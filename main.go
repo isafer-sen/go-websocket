@@ -3,7 +3,7 @@ package main
 import (
 	"crypto/md5"
 	"encoding/hex"
-	"fmt"
+	"encoding/json"
 	"log"
 	"net/http"
 
@@ -24,7 +24,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	// 将 HTTP 请求升级为 WebSocket 连接
 	conn, err := upgrade.Upgrade(w, r, nil)
 	if err != nil {
-		fmt.Println("WebSocket upgrade failed:", err)
+		log.Println("WebSocket upgrade failed:", err)
 		return
 	}
 	defer conn.Close()
@@ -40,14 +40,14 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		messageType, message, err := conn.ReadMessage()
 		if err != nil {
 			if websocket.IsCloseError(err, websocket.CloseNoStatusReceived) {
-				fmt.Println("WebSocket connection closed by client")
+				log.Println("WebSocket connection closed by client")
 			} else {
-				fmt.Println("Error reading message:", err)
+				log.Println("Error reading message:", err)
 			}
 			break
 		}
 		// 接收客户端发送的消息
-		fmt.Println("Received:", string(message))
+		log.Println("Received:", string(message))
 
 		// 群发消息给其他客户端
 		for c := range clients {
@@ -92,14 +92,16 @@ func sendToManyClients(message string) {
 }
 
 // 单发api
-func apiSendOneHandler(writer http.ResponseWriter, request *http.Request) {
-	clientID := request.URL.Query().Get("client_id")
+func apiSendOneHandler(w http.ResponseWriter, r *http.Request) {
+	clientID := r.URL.Query().Get("client_id")
 	sendToOneClient(clientID, "我是单发消息")
+	_ = json.NewEncoder(w).Encode("ok")
 }
 
 // 群发api
-func apiSendManyHandler(writer http.ResponseWriter, request *http.Request) {
+func apiSendManyHandler(w http.ResponseWriter, r *http.Request) {
 	sendToManyClients("我是群发消息")
+	_ = json.NewEncoder(w).Encode("ok")
 }
 
 func main() {
